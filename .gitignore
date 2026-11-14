@@ -1,0 +1,9 @@
+target/
+node_modules/
+.wrangler/
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+*.p8
+.DS_Store

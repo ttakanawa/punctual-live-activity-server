@@ -1,0 +1,1181 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Punctual Live Activity End API",
+    "version": "1.0.0",
+    "description": "Accepted v1 contract. Owner is derived from App Attest, never supplied in a request body. The API schedules end pushes only; APNs acceptance is not proof of device delivery."
+  },
+  "servers": [
+    {
+      "url": "https://{host}",
+      "variables": {
+        "host": {
+          "default": "example.invalid",
+          "description": "Separate deployed Worker hostname for development or production."
+        }
+      }
+    }
+  ],
+  "paths": {
+    "/v1/auth/challenges": {
+      "post": {
+        "operationId": "createChallenge",
+        "summary": "Create a one-use five-minute challenge",
+        "security": [],
+        "responses": {
+          "201": {
+            "description": "Challenge created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or unsupported content-state version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired App Attest authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found for this installation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale/conflicting revision or schedule dispatch already started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Closed job or activity lifetime exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate or storage capacity limit; Retry-After header",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds before retrying; obtain fresh authentication for the retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary service or storage failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds before retrying; obtain fresh authentication for the retry."
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChallengeRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/attestations": {
+      "post": {
+        "operationId": "registerAttestation",
+        "summary": "Register an Apple-attested key without resetting any existing counter",
+        "security": [],
+        "responses": {
+          "201": {
+            "description": "Key registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttestationResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Identical registration replay; original identity preserved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttestationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or unsupported content-state version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired App Attest authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found for this installation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale/conflicting revision or schedule dispatch already started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Closed job or activity lifetime exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate or storage capacity limit; Retry-After header",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds before retrying; obtain fresh authentication for the retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary service or storage failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds before retrying; obtain fresh authentication for the retry."
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttestationRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/end-jobs/{jobId}": {
+      "parameters": [
+        {
+          "name": "jobId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          }
+        }
+      ],
+      "put": {
+        "operationId": "putEndJob",
+        "summary": "Create or replace an end schedule",
+        "security": [
+          {
+            "AppAttestKey": [],
+            "AppAttestChallenge": [],
+            "AppAttestAssertion": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Job durably created and alarm armed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EndJob"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Job updated, or identical revision replay",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EndJob"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or unsupported content-state version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired App Attest authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found for this installation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale/conflicting revision or schedule dispatch already started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Closed job or activity lifetime exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate or storage capacity limit; Retry-After header",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds before retrying; obtain fresh authentication for the retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary service or storage failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds before retrying; obtain fresh authentication for the retry."
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutEndJob"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "getEndJob",
+        "summary": "Read only the authenticated installation's job",
+        "security": [
+          {
+            "AppAttestKey": [],
+            "AppAttestChallenge": [],
+            "AppAttestAssertion": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current durable job state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EndJob"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or unsupported content-state version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired App Attest authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found for this installation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale/conflicting revision or schedule dispatch already started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Closed job or activity lifetime exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate or storage capacity limit; Retry-After header",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds before retrying; obtain fresh authentication for the retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary service or storage failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds before retrying; obtain fresh authentication for the retry."
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "cancelEndJob",
+        "summary": "Persist cancellation even if the original registration has not arrived",
+        "security": [
+          {
+            "AppAttestKey": [],
+            "AppAttestChallenge": [],
+            "AppAttestAssertion": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current durable job state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EndJob"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or unsupported content-state version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired App Attest authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found for this installation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale/conflicting revision or schedule dispatch already started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Closed job or activity lifetime exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate or storage capacity limit; Retry-After header",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds before retrying; obtain fresh authentication for the retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary service or storage failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds before retrying; obtain fresh authentication for the retry."
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelEndJob"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/end-jobs/{jobId}/push-token": {
+      "parameters": [
+        {
+          "name": "jobId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          }
+        }
+      ],
+      "patch": {
+        "operationId": "patchPushToken",
+        "summary": "Update ActivityKit token without changing schedule, including during dispatch/retry",
+        "security": [
+          {
+            "AppAttestKey": [],
+            "AppAttestChallenge": [],
+            "AppAttestAssertion": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current durable job state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EndJob"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or unsupported content-state version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired App Attest authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found for this installation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale/conflicting revision or schedule dispatch already started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Closed job or activity lifetime exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate or storage capacity limit; Retry-After header",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds before retrying; obtain fresh authentication for the retry."
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary service or storage failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds before retrying; obtain fresh authentication for the retry."
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchPushToken"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "AppAttestKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-App-Attest-Key-Id"
+      },
+      "AppAttestChallenge": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-App-Attest-Challenge-Id"
+      },
+      "AppAttestAssertion": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-App-Attest-Assertion"
+      }
+    },
+    "schemas": {
+      "ChallengeRequest": {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "attestation",
+              "assertion"
+            ]
+          },
+          "keyId": {
+            "type": "string",
+            "contentEncoding": "base64",
+            "description": "App Attest key identifier; strict canonical standard Base64 decoding to 32 bytes."
+          }
+        },
+        "required": [
+          "purpose",
+          "keyId"
+        ],
+        "additionalProperties": false
+      },
+      "ChallengeResponse": {
+        "type": "object",
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "challenge": {
+            "type": "string",
+            "contentEncoding": "base64",
+            "description": "32 cryptographically random bytes, standard padded Base64."
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+            "description": "UTC, whole seconds, years 1970 through 9999; real calendar validity is also checked."
+          }
+        },
+        "required": [
+          "challengeId",
+          "challenge",
+          "expiresAt"
+        ],
+        "additionalProperties": false
+      },
+      "AttestationRequest": {
+        "type": "object",
+        "properties": {
+          "keyId": {
+            "type": "string",
+            "contentEncoding": "base64"
+          },
+          "challengeId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "attestationObject": {
+            "type": "string",
+            "contentEncoding": "base64"
+          }
+        },
+        "required": [
+          "keyId",
+          "challengeId",
+          "attestationObject"
+        ],
+        "additionalProperties": false
+      },
+      "AttestationResponse": {
+        "type": "object",
+        "properties": {
+          "installationId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "authScheme": {
+            "type": "string",
+            "const": "app-attest-v1"
+          }
+        },
+        "required": [
+          "installationId",
+          "authScheme"
+        ],
+        "additionalProperties": false
+      },
+      "PutEndJob": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,19}$",
+            "description": "Positive UInt64 decimal string, <=18446744073709551615; no leading zero. Monotonic per installation/job."
+          },
+          "pushToken": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 4096,
+            "pattern": "^(?:[0-9a-f]{2})+$",
+            "description": "Variable-length ActivityKit activity push token, lowercase hex. Not a UserNotifications device token."
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+            "description": "UTC, whole seconds, years 1970 through 9999; real calendar validity is also checked."
+          },
+          "notificationAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+            "description": "UTC, whole seconds, years 1970 through 9999; real calendar validity is also checked."
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+            "description": "UTC, whole seconds, years 1970 through 9999; real calendar validity is also checked."
+          },
+          "activityEndsAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+            "description": "UTC, whole seconds, years 1970 through 9999; real calendar validity is also checked."
+          },
+          "contentStateVersion": {
+            "type": "integer",
+            "const": 1
+          }
+        },
+        "required": [
+          "revision",
+          "pushToken",
+          "startsAt",
+          "notificationAt",
+          "endsAt",
+          "activityEndsAt",
+          "contentStateVersion"
+        ],
+        "additionalProperties": false
+      },
+      "PatchPushToken": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,19}$",
+            "description": "Positive UInt64 decimal string, <=18446744073709551615; no leading zero. Monotonic per installation/job."
+          },
+          "pushToken": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 4096,
+            "pattern": "^(?:[0-9a-f]{2})+$",
+            "description": "Variable-length ActivityKit activity push token, lowercase hex. Not a UserNotifications device token."
+          }
+        },
+        "required": [
+          "revision",
+          "pushToken"
+        ],
+        "additionalProperties": false
+      },
+      "CancelEndJob": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,19}$",
+            "description": "Positive UInt64 decimal string, <=18446744073709551615; no leading zero. Monotonic per installation/job."
+          }
+        },
+        "required": [
+          "revision"
+        ],
+        "additionalProperties": false
+      },
+      "Delivery": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "not_sent",
+              "in_flight",
+              "accepted",
+              "rejected",
+              "unknown"
+            ]
+          },
+          "attemptCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 8
+          },
+          "acceptedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                "description": "UTC, whole seconds, years 1970 through 9999; real calendar validity is also checked."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mayHaveBeenSent": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "state",
+          "attemptCount",
+          "acceptedAt",
+          "mayHaveBeenSent"
+        ],
+        "additionalProperties": false
+      },
+      "EndJob": {
+        "type": "object",
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "revision": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,19}$",
+            "description": "Positive UInt64 decimal string, <=18446744073709551615; no leading zero. Monotonic per installation/job."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "dispatching",
+              "retrying",
+              "awaiting_token",
+              "apns_accepted",
+              "cancelled",
+              "failed",
+              "expired"
+            ]
+          },
+          "activityEndsAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                "description": "UTC, whole seconds, years 1970 through 9999; real calendar validity is also checked."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/Delivery"
+          },
+          "lastError": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "jobId",
+          "revision",
+          "status",
+          "activityEndsAt",
+          "delivery"
+        ],
+        "additionalProperties": false
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "requestId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "requestId"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}
