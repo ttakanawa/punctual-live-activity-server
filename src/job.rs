@@ -151,7 +151,9 @@ impl Job {
             return Err(ApiError::new(410, "JOB_CLOSED"));
         }
         if matches!(op, Mutation::Put(..)) && self.dispatch_started {
-            return Err(ApiError::new(409, "DISPATCH_STARTED"));
+            let mut error = ApiError::new(409, "DISPATCH_STARTED");
+            error.details = json!({"revision":self.revision,"status":self.status});
+            return Err(error);
         }
         self.revision = op.revision().into();
         self.method = method.into();

@@ -76,7 +76,7 @@ afterEach(async()=>{expect(apnsReplies).toHaveLength(0);vi.unstubAllGlobals();aw
 
 it('fails closed for unknown keys, malformed bodies, queries and fake attestation',async()=>{
   const keyId=b64(new Uint8Array(32));
-  expect((await post('/v1/auth/challenges',{purpose:'assertion',keyId})).status).toBe(401);
+  const unknown=await post('/v1/auth/challenges',{purpose:'assertion',keyId});expect(unknown.status).toBe(401);expect((await unknown.json()).error.code).toBe('KEY_NOT_REGISTERED');
   expect((await post('/v1/auth/challenges',{purpose:'attestation',keyId:keyId.slice(0,-1)})).status).toBe(400);
   const challenge=await (await post('/v1/auth/challenges',{purpose:'attestation',keyId})).json();
   const invalid=await post('/v1/auth/attestations',{keyId,challengeId:challenge.challengeId,attestationObject:b64(bytes('fake'))});
@@ -142,7 +142,7 @@ it('fences an old-token acceptance after a concurrent rotation and finishes the 
   });
   await runDurableObjectAlarm(a.stub);
   let view=await (await a.signed('GET',path)).response.json();expect(view.status).toBe('retrying');expect(view.revision).toBe('2');expect(view.delivery.state).toBe('accepted');
-  const changed=await a.signed('PUT',path,jobBody('3',300));expect(changed.response.status).toBe(409);expect((await changed.response.json()).error.code).toBe('DISPATCH_STARTED');
+  const changed=await a.signed('PUT',path,jobBody('3',300));expect(changed.response.status).toBe(409);const error=(await changed.response.json()).error;expect(error.code).toBe('DISPATCH_STARTED');expect(error.details).toEqual({revision:'2',status:'retrying'});
   await dueNow(a.stub,id);apnsReply('/3/device/ccdd',async()=>new Response('',{status:200}));await runDurableObjectAlarm(a.stub);
   view=await (await a.signed('GET',path)).response.json();expect(view.status).toBe('apns_accepted');expect(view.delivery.attemptCount).toBe(2);
 });
@@ -178,7 +178,7 @@ it('recognizes an identical successful registration replay without resetting ide
   await runInDurableObject(a.stub,async(_obj,state)=>{const meta=await state.storage.get('meta');meta.counter=7;meta.fingerprint=fingerprint;meta.challenges=[];await state.storage.put('meta',meta);});
   const replay=await post('/v1/auth/attestations',{keyId:a.keyId,challengeId,attestationObject});
   expect(replay.status).toBe(200);expect((await replay.json()).installationId).toBe(a.identity);
-  const different=await post('/v1/auth/attestations',{keyId:a.keyId,challengeId:crypto.randomUUID(),attestationObject});expect(different.status).toBe(401);
+  const different=await post('/v1/auth/attestations',{keyId:a.keyId,challengeId:crypto.randomUUID(),attestationObject});expect(different.status).toBe(401);expect((await different.json()).error.code).toBe('CHALLENGE_REPLAYED');
   await runInDurableObject(a.stub,async(_obj,state)=>{const meta=await state.storage.get('meta');expect(meta.counter).toBe(7);expect(meta.identity).toBe(a.identity);});
 });
 it('refreshes an expired APNs provider JWT inside the bounded delivery budget',async()=>{
@@ -192,4 +192,13 @@ it('refreshes an expired APNs provider JWT inside the bounded delivery budget',a
   await dueNow(a.stub,id);
   apnsReply('/3/device/aabb',async request=>{expect(issued(request)).toBeGreaterThanOrEqual(now()-2);return new Response('',{status:200});});
   await runDurableObjectAlarm(a.stub);view=await (await a.signed('GET',path)).response.json();expect(view.status).toBe('apns_accepted');expect(view.delivery.attemptCount).toBe(2);
+});
+it('releases storage for expired challenges that never registered an identity',async()=>{
+  const raw=crypto.getRandomValues(new Uint8Array(32)),keyId=b64(raw);
+  const challenge=await post('/v1/auth/challenges',{purpose:'attestation',keyId});expect(challenge.status).toBe(201);await challenge.text();
+  const stub=env.INSTALLATIONS.get(env.INSTALLATIONS.idFromName(`development:${keyId}`));
+  await runInDurableObject(stub,async(_obj,state)=>{const meta=await state.storage.get('meta');meta.challenges.forEach(c=>c.expires=now()-1);await state.storage.put('meta',meta);await state.storage.setAlarm(Date.now()+1000);});
+  await runDurableObjectAlarm(stub);
+  await runInDurableObject(stub,async(_obj,state)=>{expect((await state.storage.list()).size).toBe(0);expect(await state.storage.getAlarm()).toBeNull();});
+  const expired=await post('/v1/auth/attestations',{keyId,challengeId:crypto.randomUUID(),attestationObject:b64(bytes('expired proof'))});expect(expired.status).toBe(401);expect((await expired.json()).error.code).toBe('CHALLENGE_EXPIRED');
 });

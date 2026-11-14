@@ -403,7 +403,14 @@ impl Installation {
             let may_create = path == "/v1/auth/challenges"
                 && json_body::<ChallengeRequest>(&body).is_ok_and(|c| c.purpose == "attestation");
             if !may_create {
-                return Ok(Err(ApiError::auth()));
+                let code = if path == "/v1/auth/challenges" {
+                    "KEY_NOT_REGISTERED"
+                } else if path == "/v1/auth/attestations" {
+                    "CHALLENGE_EXPIRED"
+                } else {
+                    "INVALID_AUTHENTICATION"
+                };
+                return Ok(Err(ApiError::new(401, code)));
             }
         }
         self.watchdog().await?;
@@ -424,7 +431,7 @@ impl Installation {
                 if path == "/v1/auth/challenges" {
                     let input:ChallengeRequest = json_body(&body)?;
                     if input.key_id != key || !["attestation","assertion"].contains(&input.purpose.as_str()) { return Err(ApiError::invalid()); }
-                    if input.purpose == "assertion" && meta.registration.is_none() { return Err(ApiError::auth()); }
+                    if input.purpose == "assertion" && meta.registration.is_none() { return Err(ApiError::new(401,"KEY_NOT_REGISTERED")); }
                     if meta.challenges.len() >= 8 { return Err(ApiError::rate("PENDING_CHALLENGE_LIMIT")); }
                     let c = Challenge { id:random_id(), value:STANDARD.encode(random_bytes()), purpose:input.purpose, expires:time+300 };
                     let view = json!({"challengeId":c.id,"challenge":c.value,"expiresAt":iso(c.expires)});
@@ -438,10 +445,10 @@ impl Installation {
                     // Canonical registration fingerprint survives challenge cleanup and counter advances.
                     let fingerprint = hash_hex(format!("{deployment}\n{key}\n{}\n{}",input.challenge_id,input.attestation_object).as_bytes());
                     if meta.registration.is_some() {
-                        if meta.fingerprint.as_deref() != Some(&fingerprint) { return Err(ApiError::auth()); }
+                        if meta.fingerprint.as_deref() != Some(&fingerprint) { return Err(ApiError::new(401,"CHALLENGE_REPLAYED")); }
                         return Ok((200,json!({"installationId":meta.identity,"authScheme":"app-attest-v1"})));
                     }
-                    let c = meta.challenges.iter().find(|c|c.id == input.challenge_id && c.purpose == "attestation").ok_or_else(ApiError::auth)?;
+                    let c = meta.challenges.iter().find(|c|c.id == input.challenge_id && c.purpose == "attestation").ok_or_else(||ApiError::new(401,"CHALLENGE_EXPIRED"))?;
                     let registration = attest::verify_attestation(&b64(&input.attestation_object,175000)?,&key_id(&key)?,&b64(&c.value,44)?,&policy,time)?;
                     meta.challenges.retain(|c|c.id != input.challenge_id);
                     meta.registration=Some(registration); meta.fingerprint=Some(fingerprint); meta.identity=Some(random_id());
@@ -449,7 +456,7 @@ impl Installation {
                 }
                 let registration = meta.registration.as_ref().ok_or_else(ApiError::auth)?;
                 uuid(&challenge_id).map_err(|_|ApiError::auth())?;
-                let c = meta.challenges.iter().find(|c|c.id == challenge_id && c.purpose == "assertion").ok_or_else(ApiError::auth)?;
+                let c = meta.challenges.iter().find(|c|c.id == challenge_id && c.purpose == "assertion").ok_or_else(||ApiError::new(401,"CHALLENGE_EXPIRED"))?;
                 let message = signing_message(&deployment,&key,&challenge_id,&c.value,&method,&path,&body);
                 let counter = attest::verify_assertion(&b64(&assertion,32768).map_err(|_|ApiError::auth())?,&registration.public_key,&hash(message.as_bytes()),&policy,meta.counter)?;
                 // No external I/O occurs between this recheck and durable mutation.
@@ -473,11 +480,14 @@ impl Installation {
                 Ok((200,job.view()))
             }.await;
             // Persist consumed authentication even when a valid signed operation fails.
-            if had_metadata || r.is_ok() { tx.put("meta",&meta).await?; }
+            if meta.registration.is_none() && meta.challenges.is_empty() {
+                tx.delete("meta").await?;
+            } else if had_metadata || r.is_ok() { tx.put("meta",&meta).await?; }
             *result.borrow_mut()=r;
             Ok(())
         }).await?;
         self.rearm().await?;
+        self.release_unregistered_storage().await?;
         let value = output.borrow().clone();
         Ok(value)
     }
@@ -510,6 +520,18 @@ impl Installation {
         )?;
         *self.provider.borrow_mut() = Some((issued, token.clone()));
         Ok(token)
+    }
+    async fn release_unregistered_storage(&self) -> Result<()> {
+        let storage = self.state.storage();
+        self.state
+            .block_concurrency_while(async move {
+                if storage.get::<Meta>("meta").await?.is_none() {
+                    storage.delete_alarm().await?;
+                    storage.delete_all().await?;
+                }
+                Ok(())
+            })
+            .await
     }
     async fn deliver(&self, token: &str, timing: &Timing, attempt_id: &str) -> Outcome {
         let environment = variable(&self.env, "APNS_ENVIRONMENT");
@@ -654,12 +676,17 @@ impl Installation {
             .transaction(|tx| async move {
                 if let Some(mut meta) = tx_get::<Meta>(&tx, "meta").await? {
                     meta.challenges.retain(|c| c.expires > now());
-                    tx.put("meta", meta).await?;
+                    if meta.registration.is_none() && meta.challenges.is_empty() {
+                        tx.delete("meta").await?;
+                    } else {
+                        tx.put("meta", meta).await?;
+                    }
                 }
                 Ok(())
             })
             .await?;
-        self.rearm().await
+        self.rearm().await?;
+        self.release_unregistered_storage().await
     }
 }
 impl DurableObject for Installation {

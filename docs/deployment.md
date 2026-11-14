@@ -63,6 +63,15 @@ the temporary directory. No deployment artifact is uploaded to GitHub.
    each signed business operation needs a fresh challenge and increasing Apple
    counter. An exact registration retry preserves its identity and counter.
 
+Recovery machine codes are KEY_NOT_REGISTERED for an assertion challenge on an
+unknown key, CHALLENGE_EXPIRED for an unavailable/expired challenge, and
+CHALLENGE_REPLAYED for a different attestation registration payload on an already
+registered key. The client can probe an assertion challenge after a lost initial
+registration response; an exact successful registration replay returns 200 even
+after challenge expiry. Invalid signatures retain INVALID_AUTHENTICATION.
+DISPATCH_STARTED includes current revision/status details so the client can stop
+timing PUT retries while retaining PATCH/cancellation for that same job.
+
 Follow [Apple's server validation guide](https://developer.apple.com/documentation/devicecheck/validating-apps-that-connect-to-your-server)
 and [Live Activity push guidance](https://developer.apple.com/documentation/activitykit/starting-and-updating-live-activities-with-activitykit-push-notifications).
 The pinned App Attest root is Apple's published certificate, with SHA-256
@@ -171,7 +180,8 @@ ACTIVE_JOB_CAPACITY or JOB_MARKER_CAPACITY, with Retry-After. Existing jobs can
 always be cancelled despite marker capacity.
 
 An indexed due queue covers scheduled jobs, retries, in-flight recovery and
-24-hour terminal cleanup. Closed markers retain only ordering and delivery
+24-hour terminal cleanup. Expired challenges for keys that never registered
+release their metadata and Alarm, preventing persistent orphan storage. Closed markers retain only ordering and delivery
 evidence for the identity's lifetime; active token/timing data and acceptedAt are
 cleared at cleanup. Cloudflare platform backups/PITR may retain older storage
 versions according to the account retention policy. Application logs contain no
