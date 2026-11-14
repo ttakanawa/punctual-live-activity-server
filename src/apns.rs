@@ -6,6 +6,12 @@ use p256::{
 };
 use serde_json::{json, Value};
 
+/// All installations use the same deterministic JWT within a 20-minute window,
+/// including after eviction, to avoid provider-token churn on pooled connections.
+pub fn provider_issued_at(now: i64) -> i64 {
+    now - now.rem_euclid(1200)
+}
+
 pub fn payload(t: &Timing, now: i64) -> Value {
     json!({"aps": { "timestamp":now, "event":"end", "dismissal-date":now-1,
         "content-state": { "title":"", "startDate":t.start-SWIFT_EPOCH,

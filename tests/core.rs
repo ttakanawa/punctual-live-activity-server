@@ -334,6 +334,9 @@ fn real_assertion_crypto_replay_environment_and_tampering() {
 }
 #[test]
 fn apns_es256_jwt_and_failure_classification() {
+    assert_eq!(apns::provider_issued_at(1200), 1200);
+    assert_eq!(apns::provider_issued_at(2399), 1200);
+    assert_eq!(apns::provider_issued_at(2400), 2400);
     use base64::engine::general_purpose::URL_SAFE_NO_PAD;
     use p256::{
         ecdsa::{signature::Verifier, VerifyingKey},

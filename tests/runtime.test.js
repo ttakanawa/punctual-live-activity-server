@@ -181,3 +181,15 @@ it('recognizes an identical successful registration replay without resetting ide
   const different=await post('/v1/auth/attestations',{keyId:a.keyId,challengeId:crypto.randomUUID(),attestationObject});expect(different.status).toBe(401);
   await runInDurableObject(a.stub,async(_obj,state)=>{const meta=await state.storage.get('meta');expect(meta.counter).toBe(7);expect(meta.identity).toBe(a.identity);});
 });
+it('refreshes an expired APNs provider JWT inside the bounded delivery budget',async()=>{
+  const a=await installation(),id=crypto.randomUUID(),path=`/v1/end-jobs/${id}`;
+  const issued=request=>JSON.parse(atob(request.headers.get('authorization').slice(7).split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).iat;
+  expect((await a.signed('PUT',path,jobBody('1',-1))).response.status).toBe(200);
+  let original;
+  apnsReply('/3/device/aabb',async request=>{original=issued(request);return Response.json({reason:'ExpiredProviderToken'},{status:403});});
+  await runDurableObjectAlarm(a.stub);
+  let view=await (await a.signed('GET',path)).response.json();expect(view.status).toBe('retrying');expect(original%1200).toBe(0);
+  await dueNow(a.stub,id);
+  apnsReply('/3/device/aabb',async request=>{expect(issued(request)).toBeGreaterThanOrEqual(now()-2);return new Response('',{status:200});});
+  await runDurableObjectAlarm(a.stub);view=await (await a.signed('GET',path)).response.json();expect(view.status).toBe('apns_accepted');expect(view.delivery.attemptCount).toBe(2);
+});

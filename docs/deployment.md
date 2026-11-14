@@ -180,8 +180,10 @@ an APNs token in a subrequest URL. Configuration failures produce a bounded
 operational error and a failed job; investigate credentials before new jobs.
 
 Retries are bounded by eight calls, the 15-minute delivery window and maximum
-Activity lifetime. Expired provider JWTs invalidate the cache and use a fresh JWT
-on the next bounded attempt. A Worker crash after APNs accepted but before the
+Activity lifetime. Deterministic provider JWTs use aligned 20-minute issuance
+windows across installations and evictions to avoid excessive token changes on
+pooled APNs connections. Expired provider JWTs invalidate the cache and generate
+a fresh JWT for the next bounded attempt. A Worker crash after APNs accepted but before the
 completion transaction can cause duplicate end pushes. Old-token acceptance
 does not complete a replacement token. Cancellation preserves any accepted or
 unknown delivery evidence. Alarms and APNs cannot promise exact-time dismissal.

@@ -481,12 +481,17 @@ impl Installation {
         let value = output.borrow().clone();
         Ok(value)
     }
-    fn provider_token(&self, time: i64) -> std::result::Result<String, &'static str> {
+    fn provider_token(
+        &self,
+        time: i64,
+        force_fresh: bool,
+    ) -> std::result::Result<String, &'static str> {
+        let window = apns::provider_issued_at(time);
         if let Some((issued, token)) = self
             .provider
             .borrow()
             .as_ref()
-            .filter(|(issued, _)| time - *issued < 3000)
+            .filter(|(issued, _)| !force_fresh && *issued >= window && time - *issued < 1200)
         {
             let _ = issued;
             return Ok(token.clone());
@@ -496,13 +501,14 @@ impl Installation {
             .secret("APNS_PRIVATE_KEY")
             .map_err(|_| "MISSING_APNS_PRIVATE_KEY")?
             .to_string();
+        let issued = if force_fresh { time } else { window };
         let token = apns::jwt(
             &private,
             &variable(&self.env, "APNS_KEY_ID"),
             &variable(&self.env, "APPLE_TEAM_ID"),
-            time,
+            issued,
         )?;
-        *self.provider.borrow_mut() = Some((time, token.clone()));
+        *self.provider.borrow_mut() = Some((issued, token.clone()));
         Ok(token)
     }
     async fn deliver(&self, token: &str, timing: &Timing, attempt_id: &str) -> Outcome {
@@ -512,7 +518,7 @@ impl Installation {
             "production" => "api.push.apple.com",
             _ => return Outcome::Configuration("INVALID_APNS_ENVIRONMENT".into()),
         };
-        let jwt = match self.provider_token(now()) {
+        let jwt = match self.provider_token(now(), false) {
             Ok(t) => t,
             Err(e) => return Outcome::Configuration(e.into()),
         };
@@ -557,6 +563,9 @@ impl Installation {
             Either::Left((Ok((status, reason, after)), _)) => {
                 if reason == "ExpiredProviderToken" {
                     *self.provider.borrow_mut() = None;
+                    if let Err(error) = self.provider_token(now(), true) {
+                        return Outcome::Configuration(error.into());
+                    }
                     Outcome::Retry("PROVIDER_TOKEN_REFRESH".into(), after, false)
                 } else {
                     apns::classify(status, &reason, after)
