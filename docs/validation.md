@@ -16,11 +16,12 @@ The implementation was checked with these commands, all with exit status 0:
   git diff --check
   ```
 
-Rust tests: 10 passed. Workers runtime tests: 12 passed. Dependency audit: zero
+Rust tests: 11 passed. Workers runtime tests: 15 passed. Dependency audit: zero
 reported npm vulnerabilities. Both dry runs package a 1.28 MiB Worker (about
 433 KiB compressed); they do not upload a Worker or provision a namespace.
 
-Coverage includes both unchanged shared fixtures, strict input validation, a
+Coverage includes the unchanged signing/end-content vectors and the shared
+[409 error fixture](../contracts/revision-errors-v1.json#L1), strict input validation, a
 complete synthetic attestation with ephemeral keys, Apple's real certificate
 chain at its historical validity time, genuine ECDSA assertions and APNs ES256
 JWTs, counter and challenge replay, environment mismatch, foreign ownership,

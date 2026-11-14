@@ -141,7 +141,7 @@ impl Job {
                     "REVISION_CONFLICT"
                 },
             );
-            e.details = json!({"revision":self.revision,"status":self.status});
+            e.details = json!({"currentRevision":self.revision,"status":self.status});
             return Err(e);
         }
         if rev == old {
@@ -152,7 +152,7 @@ impl Job {
         }
         if matches!(op, Mutation::Put(..)) && self.dispatch_started {
             let mut error = ApiError::new(409, "DISPATCH_STARTED");
-            error.details = json!({"revision":self.revision,"status":self.status});
+            error.details = json!({"currentRevision":self.revision,"status":self.status});
             return Err(error);
         }
         self.revision = op.revision().into();

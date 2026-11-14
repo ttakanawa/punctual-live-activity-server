@@ -69,7 +69,9 @@ CHALLENGE_REPLAYED for a different attestation registration payload on an alread
 registered key. The client can probe an assertion challenge after a lost initial
 registration response; an exact successful registration replay returns 200 even
 after challenge expiry. Invalid signatures retain INVALID_AUTHENTICATION.
-DISPATCH_STARTED includes current revision/status details so the client can stop
+All three revision-related 409 responses include error.details.currentRevision
+and error.details.status, as fixed by [the shared fixture](../contracts/revision-errors-v1.json#L1).
+DISPATCH_STARTED includes those current values so the client can stop
 timing PUT retries while retaining PATCH/cancellation for that same job.
 
 Follow [Apple's server validation guide](https://developer.apple.com/documentation/devicecheck/validating-apps-that-connect-to-your-server)

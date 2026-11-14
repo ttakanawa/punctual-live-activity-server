@@ -1,5 +1,6 @@
 import { env, SELF, runInDurableObject, runDurableObjectAlarm, evictDurableObject, reset } from 'cloudflare:test';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
+import revisionErrors from '../contracts/revision-errors-v1.json';
 
 const text=new TextEncoder();
 const bytes=s=>text.encode(s);
@@ -74,6 +75,25 @@ beforeEach(()=>{
 });
 afterEach(async()=>{expect(apnsReplies).toHaveLength(0);vi.unstubAllGlobals();await reset();});
 
+it.each(revisionErrors.cases)('matches the shared 409 response: $name',async testCase=>{
+  const a=await installation(),id=crypto.randomUUID(),path=`/v1/end-jobs/${id}`,body=jobBody(testCase.currentRevision);
+  expect((await a.signed('PUT',path,body)).response.status).toBe(200);
+  if(testCase.currentStatus!=='scheduled') {
+    await runInDurableObject(a.stub,async(_obj,state)=>{
+      const job=await state.storage.get(`job/${id}`);
+      job.status=testCase.currentStatus;job.dispatch_started=true;job.first_attempt=now();job.delivery.attemptCount=1;
+      await state.storage.put(`job/${id}`,job);
+    });
+  }
+  const response=(await a.signed(testCase.method,path,{...body,revision:testCase.requestRevision,pushToken:'ccdd'})).response;
+  expect(response.status).toBe(testCase.statusCode);expect(response.headers.get('Cache-Control')).toBe('no-store');
+  const actual=await response.json();
+  expect(actual.error.requestId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+  actual.error.requestId=testCase.response.error.requestId;
+  expect(actual).toEqual(testCase.response);
+  const current=await (await a.signed('GET',path)).response.json();expect(current.revision).toBe(testCase.currentRevision);expect(current.status).toBe(testCase.currentStatus);
+});
+
 it('fails closed for unknown keys, malformed bodies, queries and fake attestation',async()=>{
   const keyId=b64(new Uint8Array(32));
   const unknown=await post('/v1/auth/challenges',{purpose:'assertion',keyId});expect(unknown.status).toBe(401);expect((await unknown.json()).error.code).toBe('KEY_NOT_REGISTERED');
@@ -142,7 +162,7 @@ it('fences an old-token acceptance after a concurrent rotation and finishes the 
   });
   await runDurableObjectAlarm(a.stub);
   let view=await (await a.signed('GET',path)).response.json();expect(view.status).toBe('retrying');expect(view.revision).toBe('2');expect(view.delivery.state).toBe('accepted');
-  const changed=await a.signed('PUT',path,jobBody('3',300));expect(changed.response.status).toBe(409);const error=(await changed.response.json()).error;expect(error.code).toBe('DISPATCH_STARTED');expect(error.details).toEqual({revision:'2',status:'retrying'});
+  const changed=await a.signed('PUT',path,jobBody('3',300));expect(changed.response.status).toBe(409);const error=(await changed.response.json()).error;expect(error.code).toBe('DISPATCH_STARTED');expect(error.details).toEqual({currentRevision:'2',status:'retrying'});
   await dueNow(a.stub,id);apnsReply('/3/device/ccdd',async()=>new Response('',{status:200}));await runDurableObjectAlarm(a.stub);
   view=await (await a.signed('GET',path)).response.json();expect(view.status).toBe('apns_accepted');expect(view.delivery.attemptCount).toBe(2);
 });

@@ -13,6 +13,7 @@ custom text, or iCloud account identifiers.
 - [API behavior](docs/api-v1.md) defines authentication, ordering, and delivery behavior.
 - [Signing fixture](contracts/signing-v1.json) is shared by Rust and Swift tests.
 - [End-content fixture](contracts/end-content-state-v1.json) fixes the ActivityKit wire format.
+- [409 error fixture](contracts/revision-errors-v1.json#L1) fixes currentRevision/status error details for Rust, Workers and Swift.
 - [Coordination](docs/coordination.md) records implementation ownership and integration requirements.
 
 Production deployment and real-device APNs verification require credentials

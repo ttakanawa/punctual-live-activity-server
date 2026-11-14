@@ -82,6 +82,48 @@ fn exact_shared_vectors() {
     );
 }
 #[test]
+fn shared_revision_error_responses() {
+    let errors: Value =
+        serde_json::from_str(include_str!("../contracts/revision-errors-v1.json")).unwrap();
+    for case in errors["cases"].as_array().unwrap() {
+        let mut original = fixture();
+        original.revision = case["currentRevision"].as_str().unwrap().into();
+        let timing = original.validate().unwrap();
+        let mut job = Job::new("8f5b583d-c03a-4c35-9ad7-6c18cda0c063");
+        job.apply(
+            "PUT",
+            "original",
+            Mutation::Put(original.clone(), timing.clone()),
+            1794800000,
+        )
+        .unwrap();
+        job.status = serde_json::from_value(case["currentStatus"].clone()).unwrap();
+        job.dispatch_started = job.status != Status::Scheduled;
+        let mut request = original;
+        request.revision = case["requestRevision"].as_str().unwrap().into();
+        request.push_token = "ccdd".into();
+        let error = job
+            .apply(
+                case["method"].as_str().unwrap(),
+                "changed",
+                Mutation::Put(request, timing),
+                1794800000,
+            )
+            .unwrap_err();
+        assert_eq!(error.status, case["statusCode"].as_u64().unwrap() as u16);
+        let request_id = case["response"]["error"]["requestId"].as_str().unwrap();
+        uuid(request_id).unwrap();
+        assert_eq!(
+            json!({"error":{"code":error.code,"message":error.message,"requestId":request_id,"details":error.details}}),
+            case["response"],
+            "{}",
+            case["name"]
+        );
+        assert_eq!(job.revision, case["currentRevision"]);
+        assert_eq!(job.body_hash, "original");
+    }
+}
+#[test]
 fn strict_wire_validation() {
     for bad in ["0", "01", "18446744073709551616", "-1", "1.0", "1\n", ""] {
         assert!(revision(bad).is_err(), "{bad}");

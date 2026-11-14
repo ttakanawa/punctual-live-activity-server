@@ -84,6 +84,13 @@ After authentication, compare revisions in this order:
 5. Higher PUT after first dispatch began: 409 DISPATCH_STARTED.
 6. Otherwise apply the update, or idempotently cancel, and persist the next alarm.
 
+STALE_REVISION, REVISION_CONFLICT and DISPATCH_STARTED responses all include
+error.details.currentRevision as the current positive UInt64 decimal string and
+error.details.status as the current job status. The details object does not use
+a revision alias. The shared [409 error fixture](../contracts/revision-errors-v1.json#L1)
+fixes these response bodies, including revisions above JavaScript's safe integer
+range and the UInt64 maximum.
+
 Replayed requests return current state, not an archived response. Thus an
 identical accepted PUT can later return apns_accepted with the same revision.
 DELETE also works after a terminal state; it never erases delivery evidence or
