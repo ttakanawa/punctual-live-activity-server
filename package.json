@@ -1,0 +1,20 @@
+{
+  "name": "punctual-end-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "worker-build --release",
+    "test": "vitest run",
+    "dev": "wrangler dev --env development",
+    "check:contract": "node scripts/check-contract.mjs"
+  },
+  "devDependencies": {
+    "vitest": "4.1.12",
+    "wrangler": "4.162.0",
+    "@cloudflare/vitest-plugin": "1.8.2"
+  },
+  "overrides": {
+    "undici": "7.30.2",
+    "sharp": "0.35.5"
+  }
+}
