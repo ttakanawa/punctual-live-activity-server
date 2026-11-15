@@ -1,0 +1,31 @@
+name: CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: dtolnay/rust-toolchain@1.100.0
+        with:
+          targets: wasm32-unknown-unknown
+          components: rustfmt,clippy
+      - run: npm ci
+      - run: cargo fmt --check
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      - run: cargo clippy --locked --target wasm32-unknown-unknown -- -D warnings
+      - run: cargo test --locked
+      - run: npm run check:contract
+      - run: cargo install worker-build --version 0.9.0 --locked
+      - run: npm run build
+      - run: npm test
+      - run: npx wrangler deploy --dry-run --env development --outdir /tmp/punctual-dev
+      - run: npx wrangler deploy --dry-run --env production --outdir /tmp/punctual-prod
+      - run: npm audit --audit-level=moderate

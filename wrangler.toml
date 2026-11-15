@@ -1,0 +1,80 @@
+name = "punctual-end-api"
+main = "build/worker/shim.mjs"
+compatibility_date = "2026-11-01"
+workers_dev = false
+preview_urls = false
+
+[limits]
+cpu_ms = 1000
+
+[build]
+command = "npm run build"
+
+[observability]
+enabled = true
+head_sampling_rate = 0.1
+
+[observability.logs]
+enabled = true
+invocation_logs = false
+
+[observability.traces]
+enabled = false
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Installation"]
+
+[env.development]
+name = "punctual-end-api-development"
+workers_dev = true
+
+[[env.development.durable_objects.bindings]]
+name = "INSTALLATIONS"
+class_name = "Installation"
+
+[[env.development.ratelimits]]
+name = "AUTH_IP"
+namespace_id = "1001"
+simple = { limit = 60, period = 60 }
+
+[env.development.vars]
+DEPLOYMENT_ENVIRONMENT = "development"
+APP_ATTEST_ENVIRONMENT = "development"
+APNS_ENVIRONMENT = "sandbox"
+APPLE_APP_ID_PREFIX = "OWNERSETUP"
+APPLE_TEAM_ID = "OWNERSETUP"
+APNS_KEY_ID = "OWNERSETUP"
+ATTEST_ALLOWED_CATEGORIES = "3"
+ATTEST_ALLOWED_BUNDLE_VERSIONS = ""
+KEY_ISSUE_LIMIT = "30"
+AUTH_REQUEST_LIMIT = "120"
+ACTIVE_JOB_LIMIT = "16"
+MARKER_LIMIT = "100000"
+
+[env.production]
+name = "punctual-end-api-production"
+workers_dev = true
+
+[[env.production.durable_objects.bindings]]
+name = "INSTALLATIONS"
+class_name = "Installation"
+
+[[env.production.ratelimits]]
+name = "AUTH_IP"
+namespace_id = "1002"
+simple = { limit = 60, period = 60 }
+
+[env.production.vars]
+DEPLOYMENT_ENVIRONMENT = "production"
+APP_ATTEST_ENVIRONMENT = "production"
+APNS_ENVIRONMENT = "production"
+APPLE_APP_ID_PREFIX = "OWNERSETUP"
+APPLE_TEAM_ID = "OWNERSETUP"
+APNS_KEY_ID = "OWNERSETUP"
+ATTEST_ALLOWED_CATEGORIES = "2,4"
+ATTEST_ALLOWED_BUNDLE_VERSIONS = ""
+KEY_ISSUE_LIMIT = "30"
+AUTH_REQUEST_LIMIT = "120"
+ACTIVE_JOB_LIMIT = "16"
+MARKER_LIMIT = "100000"

@@ -1159,6 +1159,7 @@
                 "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
               },
               "details": {
+                "description": "For STALE_REVISION, REVISION_CONFLICT and DISPATCH_STARTED (HTTP 409), contains currentRevision as the current positive UInt64 decimal string and status as the current EndJob status. The field is currentRevision, not revision.",
                 "type": "object",
                 "additionalProperties": true
               }
