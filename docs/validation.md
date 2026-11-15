@@ -20,6 +20,19 @@ Rust tests: 11 passed. Workers runtime tests: 15 passed. Dependency audit: zero
 reported npm vulnerabilities. Both dry runs package a 1.28 MiB Worker (about
 433 KiB compressed); they do not upload a Worker or provision a namespace.
 
+Local setup was also verified from [mise.toml](../mise.toml#L1), using mise
+2025.8.9 with Rust 1.100.0, Node 22.23.5 and worker-build 0.9.0:
+
+  ```sh
+  mise install
+  mise exec -- npm ci
+  mise exec -- cargo fmt --check
+  mise exec -- cargo test --locked
+  mise exec -- npm run build
+  mise exec -- npm test
+  mise exec -- npm run check:contract
+  ```
+
 Coverage includes the unchanged signing/end-content vectors and the shared
 [409 error fixture](../contracts/revision-errors-v1.json#L1), strict input validation, a
 complete synthetic attestation with ephemeral keys, Apple's real certificate

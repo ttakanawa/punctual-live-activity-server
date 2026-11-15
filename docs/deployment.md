@@ -120,17 +120,27 @@ set DEPLOY_TARGET to development or production, and run
 the same configuration validation and atomic secret upload.
 
 The top-level Wrangler target is disabled; always choose an environment.
-For local work, install Node 22+, Rust 1.100+, the wasm32-unknown-unknown target,
-and worker-build 0.9.0. Use [the scripts](../package.json#L1):
+For local work, install the tools declared in [mise.toml](../mise.toml#L1) with
+mise. It pins Node 22.23.5, Rust 1.100.0 and worker-build 0.9.0, and installs the
+wasm32-unknown-unknown target, rustfmt and clippy. Use [the scripts](../package.json#L1)
+through mise so noninteractive shells also resolve the correct tools:
 
   ```sh
-  npm ci
-  cargo install worker-build --version 0.9.0 --locked
-  cargo test --locked
-  npm run build
-  npm test
-  npm run dev
+  mise trust
+  mise install
+  mise exec -- npm ci
+  mise exec -- cargo test --locked
+  mise exec -- npm run build
+  mise exec -- npm test
+  mise exec -- npm run dev
   ```
+
+The mise Rust backend manages rustup internally. Its standard backing stores are
+the Cargo and rustup home directories; worker-build is installed separately in
+mise's versioned tool directory. Do not run a standalone rustup installer or add
+Cargo sourcing lines to shell startup files for this project. The CI runners
+keep their existing explicit toolchain installation, independently of local
+shell configuration.
 
 Local configuration uses an ignored .dev.vars.development file for owner values,
 including APPLE_APP_ID_PREFIX and the APNs secret if local delivery is intended.

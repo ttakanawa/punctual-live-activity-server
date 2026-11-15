@@ -27,13 +27,18 @@ APNs dispatch, bounded retries, recovery and sensitive-data cleanup. Closed job
 markers remain for the registered identity's lifetime.
 
   ```sh
-  cargo test --locked
-  npm ci
-  cargo install worker-build --version 0.9.0 --locked
-  npm run build
-  npm test
-  npm run check:contract
+  mise trust
+  mise install
+  mise exec -- npm ci
+  mise exec -- cargo test --locked
+  mise exec -- npm run build
+  mise exec -- npm test
+  mise exec -- npm run check:contract
   ```
+
+Local tools are pinned in [mise.toml](mise.toml#L1), including Rust, its Wasm
+target, rustfmt, clippy, Node and worker-build. Use mise for local installation;
+no standalone Rust installer or shell startup file changes are needed.
 
 Read [deployment and owner setup](docs/deployment.md#L1) for exact GitHub values,
 Apple capabilities, Cloudflare registration and manual device testing. Deployment
